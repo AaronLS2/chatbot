@@ -21,7 +21,7 @@ if st.session_state.get("ask_trigger"):
     if user_query:
         try:
             # ✅ Send request to FastAPI & check for errors
-            response = requests.get(f"http://localhost:8000/chat?q={user_query}")
+            response = requests.get(f"https://fsa-chatbot.onrender.com/chat?q={user_query}")
 
             if response.status_code == 200:  # ✅ Ensure valid response
                 data = response.json()
