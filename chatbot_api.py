@@ -1,4 +1,6 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 import logging
 import chromadb
 import os
@@ -22,14 +24,22 @@ logging.basicConfig(level=logging.DEBUG)
 # ✅ In-memory session storage for multi-turn memory
 session_memory = {}
 
-@app.get("/chat")
-def chat(q: str = Query(..., description="User query"), session_id: str = Query(default="default")):
+# ✅ Define request model
+class ChatRequest(BaseModel):
+    query: str
+    session_id: str = "default"
+
+@app.post("/chat")
+def chat(request: ChatRequest):
     """
     Chatbot API with multi-turn memory.
-    Remembers previous messages in the session.
+    Accepts JSON input and returns structured JSON responses.
     """
 
     try:
+        q = request.query
+        session_id = request.session_id
+
         logging.debug(f"🔹 Received query: {q}")
 
         # Retrieve or initialize session history
@@ -70,7 +80,7 @@ def chat(q: str = Query(..., description="User query"), session_id: str = Query(
             Here is relevant information from a trusted source:
             {raw_text}
 
-            Respond in a **friendly, natural way**.
+            Respond in a **friendly, natural way** and include the source link: {source_url}
             """
 
             response = openai_client.chat.completions.create(
@@ -85,17 +95,27 @@ def chat(q: str = Query(..., description="User query"), session_id: str = Query(
             history.append({"user": q, "bot": conversational_response})
             session_memory[session_id] = history
 
-            return {
-                "response": conversational_response,
-                "source": source_url,
-                "history": history  # ✅ Send history back for debugging
-            }
+            # ✅ Return structured JSON response
+            return JSONResponse(
+                content={
+                    "response": conversational_response,
+                    "source": source_url,
+                    "history": history  # ✅ Send history back for debugging
+                },
+                status_code=200
+            )
 
-        return {"response": "I couldn't find anything on that topic.", "source": None}
+        return JSONResponse(
+            content={"response": "I couldn't find anything on that topic.", "source": None},
+            status_code=200
+        )
 
     except Exception as e:
         logging.error(f"❌ FastAPI encountered an error: {e}", exc_info=True)
-        return {"response": "Sorry, I ran into an issue. Please try again later.", "source": None}
+        return JSONResponse(
+            content={"response": "Sorry, I ran into an issue. Please try again later.", "source": None},
+            status_code=500
+        )
 
 # ✅ Run the FastAPI server
 if __name__ == "__main__":
