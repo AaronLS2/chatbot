@@ -85,20 +85,13 @@ def chat(q: str = Query(..., description="User query"), session_id: str = Query(
             history.append({"user": q, "bot": conversational_response})
             session_memory[session_id] = history
 
-            # ✅ Return structured JSON response
-            return JSONResponse(
-                content={
-                    "response": conversational_response,
-                    "source": source_url,
-                    "history": history  # ✅ Send history back for debugging
-                },
-                status_code=200
-            )
+            return {
+                "response": conversational_response,
+                "source": source_url,
+                "history": history  # ✅ Send history back for debugging
+            }
 
-        return JSONResponse(
-            content={"response": "I couldn't find anything on that topic.", "source": None},
-            status_code=200
-        )
+        return {"response": "I couldn't find anything on that topic.", "source": None}
 
     except Exception as e:
         logging.error(f"❌ FastAPI encountered an error: {e}", exc_info=True)
