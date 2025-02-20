@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import logging
@@ -29,8 +29,13 @@ class ChatRequest(BaseModel):
     query: str
     session_id: str = "default"
 
+# Validate API key  
+async def verify_api_key(api_key: str = Header(...)):  
+    if api_key != os.getenv("API_KEY"):  
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
 @app.post("/chat")
-def chat(request: ChatRequest):
+def chat(request: ChatRequest, api_key: str = Depends(verify_api_key)):
     """
     Chatbot API with multi-turn memory.
     Accepts JSON input and returns structured JSON responses.
